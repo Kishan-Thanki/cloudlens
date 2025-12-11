@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CloudLens</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="cloudlens_logo.png" />
+    <!-- Google Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- External CSS -->
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- REQUIRED ZIP LIBRARIES -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <button
+        class="theme-switch"
+        onclick="toggleTheme()"
+        aria-label="Toggle Dark Mode"
+      >
+        <!-- Icons -->
+        <svg
+          id="moon-icon"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <svg
+          id="sun-icon"
+          class="hidden"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      </button>
+
+      <div class="header">
+        <div class="title-wrapper">
+          <img src="cloudlens_logo.png" alt="CloudLens Logo" class="app-logo" />
+          <h1>CloudLens</h1>
+        </div>
+        <p class="subtitle">Secure Image Processing Pipeline</p>
+      </div>
+
+      <div class="mode-selector">
+        <button class="mode-btn active" onclick="setMode('watermark')">
+          Watermark
+        </button>
+        <button class="mode-btn" onclick="setMode('thumbnail')">
+          Thumbnail
+        </button>
+      </div>
+
+      <div id="info-watermark" class="info-box" style="display: block">
+        <strong>Mode:</strong> Upload image(s). Content will be scanned for
+        safety before watermarking.
+      </div>
+      <div id="info-thumbnail" class="info-box">
+        <strong>Mode:</strong> Upload image(s). Content will be scanned for
+        safety before resizing.
+      </div>
+
+      <div class="input-group" id="input-watermark">
+        <label>Watermark Text</label>
+        <input
+          type="text"
+          id="customText"
+          maxlength="10"
+          placeholder="Type text here..."
+        />
+      </div>
+
+      <div class="input-group hidden" id="input-thumbnail">
+        <label>Target Width (px)</label>
+        <input type="number" id="customSize" min="50" max="1000" value="300" />
+      </div>
+
+      <div class="input-group">
+        <label>Select Files</label>
+        <!-- Allows selecting multiple files at once -->
+        <input
+          type="file"
+          id="fileInput"
+          accept="image/jpeg, image/png"
+          multiple
+          onchange="showFilePreview(event)"
+        />
+
+        <!-- PREVIEW AREA -->
+        <div id="preview-container" class="hidden">
+          <!-- Single Image Preview -->
+          <div
+            style="display: flex; flex-direction: column; align-items: center"
+          >
+            <img id="uploadPreview" class="hidden" src="" alt="File Preview" />
+            <button
+              id="addMoreBtn"
+              class="hidden"
+              onclick="document.getElementById('fileInput').click()"
+              style="
+                margin-top: 10px;
+                background: transparent;
+                border: 1px dashed var(--primary);
+                color: var(--primary);
+                padding: 5px 10px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 0.8rem;
+              "
+            >
+              + Add More Images
+            </button>
+          </div>
+
+          <!-- Multiple Files Icon -->
+          <div id="multi-file-icon" class="hidden">
+            <svg
+              width="64"
+              height="64"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="color: var(--primary)"
+            >
+              <path
+                d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+              ></path>
+            </svg>
+            <div
+              style="font-weight: 600; margin-top: 5px; color: var(--text-main)"
+            >
+              <span id="fileCount">0</span> Files Selected
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button id="uploadBtn" class="action-btn" onclick="processBatch()">
+        Start Processing
+      </button>
+
+      <!-- Progress Bar -->
+      <div
+        id="progress-container"
+        class="hidden"
+        style="
+          margin-top: 20px;
+          background: #e2e8f0;
+          border-radius: 8px;
+          height: 10px;
+          overflow: hidden;
+        "
+      >
+        <div
+          id="progress-bar"
+          style="
+            width: 0%;
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s ease;
+          "
+        ></div>
+      </div>
+
+      <div id="status"></div>
+
+      <div id="result-area">
+        <h3 style="margin: 0; color: var(--text-main)">Processing Complete!</h3>
+        <p
+          style="
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            margin-bottom: 1.5rem;
+          "
+        >
+          Successfully processed:
+          <span
+            id="successCount"
+            style="font-weight: bold; color: var(--primary)"
+            >0</span
+          >
+          files.
+        </p>
+
+        <!-- Safety Report Area -->
+        <div
+          id="safety-report"
+          class="hidden"
+          style="
+            text-align: left;
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            color: #b91c1c;
+            font-size: 0.85rem;
+          "
+        >
+          <strong>⚠️ Safety Filter Report:</strong>
+          <ul id="rejected-list" style="margin: 5px 0 0 20px; padding: 0"></ul>
+        </div>
+
+        <!-- Result Image Preview (Initially Hidden) -->
+        <img id="resultImg" class="preview hidden" alt="Processed Result" />
+
+        <!-- Single File Download Button -->
+        <a id="downloadSingleBtn" class="download-btn hidden" href="#" download
+          >Download Image</a
+        >
+
+        <!-- Batch Zip Download Button -->
+        <a id="downloadZipBtn" class="download-btn hidden" href="#"
+          >Download All as ZIP</a
+        >
+      </div>
+    </div>
+
+    <!--Script-->
+    <script src="script.js"></script>
+  </body>
+</html>
